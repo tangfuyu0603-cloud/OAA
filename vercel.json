@@ -1,5 +1,16 @@
 {
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/OAA.html" }
-  ]
+  "short_name": "OAA系統",
+  "name": "高度育成高等學校 - OAA系統",
+  "icons": [
+    {
+      "src": "https://placehold.co/192x192/0b1528/ffffff?text=OAA",
+      "type": "image/png",
+      "sizes": "192x192"
+    }
+  ],
+  "start_url": "index.html",
+  "background_color": "#050b14",
+  "theme_color": "#0b1528",
+  "display": "standalone",
+  "orientation": "portrait"
 }
