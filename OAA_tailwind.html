@@ -823,9 +823,9 @@
           <thead>
             <tr class="border-b border-[rgba(0,210,255,0.07)]">
               <th class="font-mono text-[9px] text-[#c0cfe0]/38 tracking-wider pb-2 text-left font-normal">科目</th>
-              <th class="font-mono text-[9px] text-[#c0cfe0]/38 tracking-wider pb-2 text-center font-normal">上學期末</th>
-              <th class="font-mono text-[9px] text-[#c0cfe0]/38 tracking-wider pb-2 text-center font-normal">下學期末</th>
-              <th class="font-mono text-[9px] text-[#c0cfe0]/38 tracking-wider pb-2 text-center font-normal">特別考試</th>
+              <th class="font-mono text-[9px] text-[#c0cfe0]/38 tracking-wider pb-2 text-center font-normal">日常評量</th>
+              <th class="font-mono text-[9px] text-[#c0cfe0]/38 tracking-wider pb-2 text-center font-normal">科目平均</th>
+              <th class="font-mono text-[9px] text-[#c0cfe0]/38 tracking-wider pb-2 text-center font-normal">定期評量</th>
               <th class="font-mono text-[9px] text-[#c0cfe0]/38 tracking-wider pb-2 text-right font-normal">年度總計</th>
             </tr>
           </thead>
@@ -1311,9 +1311,11 @@ function handleSSEEvent(raw) {
     s.so = data.so ?? s.so;
     if (data.subjects && data.subjects.length) {
       EXAMS[s.id] = data.subjects.map(sub => {
-        const name = sub['科目名稱'] || sub['科目'] || sub['name'] || '—';
+        const name = sub['學科名稱'] || '—';
         const avg  = sub['科目平均'] != null ? sub['科目平均'] : '—';
-        return [name, '—', avg, '—', avg];
+        const exam = sub['定期評量'] != null ? sub['定期評量'] : '—';
+        const daily= sub['日常評量'] != null ? sub['日常評量'] : '—';
+        return [name, daily, avg, exam, avg];
       });
     }
     renderList();
