@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<!-- OAA Dashboard — Tailwind CSS Edition -->
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OAA — 全面能力指標系統</title>
+
+  <!-- Tailwind Play CDN (supports arbitrary values) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            orbitron: ['Orbitron', 'monospace'],
+            mono:     ['Share Tech Mono', 'monospace'],
+            noto:     ['Noto Sans TC', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@300;400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* ── Grid background ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        linear-gradient(rgba(0,210,255,0.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,210,255,0.028) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    /* ── Top ambient glow ── */
+    body::after {
+      content: '';
+      position: fixed; pointer-events: none; z-index: 0;
+      top: -160px; left: 50%; transform: translateX(-50%);
+      width: 700px; height: 320px;
+      background: radial-gradient(ellipse, rgba(0,210,255,0.07) 0%, transparent 70%);
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,210,255,0.22); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0,210,255,0.45); }
+
+    /* ── Tech corner ornaments ── */
+    .corners {
+      position: relative;
+    }
+    .corners::before, .corners::after {
+      content: '';
+      position: absolute;
+      width: 14px; height: 14px;
+      pointer-events: none;
+    }
+    .corners::before { top: 0; left: 0;   border-top:  2px solid #00d2ff; border-left:  2px solid #00d2ff; }
+    .corners::after  { bottom: 0; right: 0; border-bottom: 2px solid #00d2ff; border-right: 2px solid #00d2ff; }
+
+    /* ── Progress bars ── */
+    .prog-track {
+      height: 4px; border-radius: 2px;
+      background: rgba(255,255,255,0.07);
+      overflow: hidden;
+    }
+    .prog-fill {
+      height: 100%; border-radius: 2px;
+      transition: width 0.55s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    /* ── Student card in sidebar ── */
+    .s-card {
+      border-radius: 10px;
+      border: 1px solid rgba(0,210,255,0.10);
+      background: rgba(13,21,38,0.6);
+      padding: 10px 12px;
+      display: flex; align-items: center; gap: 10px;
+      cursor: pointer;
+      transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
+    }
+    .s-card:hover {
+      background: rgba(0,210,255,0.05);
+      border-color: rgba(0,210,255,0.28);
+    }
+    .s-card.active {
+      background: rgba(0,210,255,0.09);
+      border-color: rgba(0,210,255,0.50);
+      box-shadow: 0 0 12px rgba(0,210,255,0.08);
+    }
+
+    /* ── Class filter pills ── */
+    .cls-btn {
+      flex: 1; height: 28px;
+      border-radius: 6px;
+      border: 1px solid rgba(0,210,255,0.12);
+      background: transparent;
+      color: rgba(192,207,224,0.35);
+      font-family: 'Orbitron', monospace;
+      font-size: 10px; font-weight: 700; letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+    .cls-btn:hover {
+      background: rgba(0,210,255,0.06);
+      border-color: rgba(0,210,255,0.28);
+      color: rgba(192,207,224,0.75);
+    }
+    .cls-btn.on {
+      background: rgba(0,210,255,0.13);
+      border-color: rgba(0,210,255,0.48);
+      color: #00d2ff;
+      box-shadow: 0 0 10px rgba(0,210,255,0.18);
+    }
+
+    /* ── Scan-line animation on profile card ── */
+    @keyframes scan {
+      0%   { top: 0; opacity: 0.7; }
+      100% { top: 100%; opacity: 0; }
+    }
+    .scan-line::after {
+      content: '';
+      position: absolute; left: 0; right: 0; top: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(0,210,255,0.55), transparent);
+      animation: scan 3.5s linear infinite;
+      pointer-events: none;
+    }
+
+    /* ── Avatar pulse ring ── */
+    @keyframes ring-pulse {
+      0%, 100% { transform: scale(1);    opacity: 0.35; }
+      50%       { transform: scale(1.07); opacity: 0.70; }
+    }
+    .pulse-ring { animation: ring-pulse 3s ease-in-out infinite; }
+
+    /* ── Fade-up on detail switch ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.28s ease; }
+
+    /* ── Sync spin ── */
+    @keyframes spin-cw { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .spin { animation: spin-cw 0.9s linear infinite; }
+
+    /* ── Sync Modal ── */
+    @keyframes modal-in {
+      from { opacity: 0; transform: scale(0.96) translateY(10px); }
+      to   { opacity: 1; transform: scale(1)    translateY(0);     }
+    }
+    #sync-modal { transition: opacity .2s; }
+    #sync-modal.hidden { display: none !important; }
+    .sync-modal-box { animation: modal-in .25s cubic-bezier(0.4,0,0.2,1); }
+
+    /* Terminal 捲軸 */
+    #sync-terminal {
+      -webkit-overflow-scrolling: touch; /* iOS 慣性捲動 */
+      overscroll-behavior: contain;      /* 防止捲動穿透到父層 */
+    }
+    #sync-terminal::-webkit-scrollbar { width: 3px; }
+    #sync-terminal::-webkit-scrollbar-track { background: transparent; }
+    #sync-terminal::-webkit-scrollbar-thumb { background: rgba(0,210,255,0.2); border-radius: 2px; }
+
+    /* Terminal 最後一行的游標閃爍 */
+    #sync-terminal .term-line:last-child .term-text::after {
+      content: '▌';
+      color: #00d2ff;
+      animation: blink-cur .9s step-start infinite;
+      margin-left: 2px;
+    }
+    @keyframes blink-cur { 50% { opacity: 0; } }
+
+    /* ── Mobile slide panels ── */
+    @media (max-width: 767px) {
+      #body-flex { width: 200vw; transition: transform 0.32s cubic-bezier(0.4,0,0.2,1); }
+      #body-flex.show-detail { transform: translateX(-50%); }
+    }
+    /* ── Mobile hamburger menu ── */
+    #mobile-menu { transition: opacity .18s, transform .18s; transform-origin: top right; }
+    #mobile-menu.hidden { display: none !important; }
+
+    /* ── Glow helpers ── */
+    .glow-cyan   { text-shadow: 0 0 12px rgba(0,210,255,0.65); }
+    .glow-gold   { text-shadow: 0 0 14px rgba(255,215,0,0.75); }
+    .glow-green  { text-shadow: 0 0 12px rgba(0,229,160,0.65); }
+    .glow-orange { text-shadow: 0 0 12px rgba(255,140,66,0.65); }
+    .glow-purple { text-shadow: 0 0 12px rgba(176,96,255,0.65); }
+
+    /* ── Login overlay ── */
+    @keyframes overlay-fade-out {
+      from { opacity: 1; }
+      to   { opacity: 0; }
+    }
+    #login-overlay.fading {
+      animation: overlay-fade-out 0.65s cubic-bezier(0.4,0,0.2,1) forwards;
+      pointer-events: none;
+    }
+    #login-overlay.gone { display: none !important; }
+
+    /* ── Login card entrance ── */
+    @keyframes auth-flicker {
+      0%   { opacity: 0; transform: scale(0.97) translateY(12px); }
+      65%  { opacity: 1; transform: scale(1.004) translateY(-2px); }
+      100% { opacity: 1; transform: scale(1)     translateY(0);    }
+    }
+    .login-card { animation: auth-flicker 0.42s cubic-bezier(0.4,0,0.2,1); }
+
+    /* ── Login button states ── */
+    #login-btn:hover:not(:disabled) {
+      box-shadow: 0 0 32px rgba(0,210,255,0.22), inset 0 0 24px rgba(0,210,255,0.08);
+    }
+    #login-btn:active:not(:disabled) { transform: scale(0.98); }
+    #login-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    /* ── Login input placeholder ── */
+    #login-user::placeholder,
+    #login-pass::placeholder { color: rgba(192,207,224,0.30); }
+  </style>
+</head>
+
+<body class="bg-[#050810] text-[#e8f0fe] font-noto h-screen overflow-hidden flex flex-col relative">
+
+<!-- ════════════════════════════════════════════════════════
+     LOGIN OVERLAY — 中央數據庫驗證系統
+════════════════════════════════════════════════════════ -->
+<div id="login-overlay"
+     class="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto py-8">
+
+  <!-- 背景：深色半透明 + 模糊 -->
+  <div class="absolute inset-0" style="background:rgba(5,8,16,0.97);backdrop-filter:blur(6px)"></div>
+
+  <!-- 網格線（與 body::before 相同規格） -->
+  <div class="absolute inset-0 pointer-events-none"
+       style="background-image:linear-gradient(rgba(0,210,255,0.028) 1px,transparent 1px),
+              linear-gradient(90deg,rgba(0,210,255,0.028) 1px,transparent 1px);
+              background-size:40px 40px"></div>
+
+  <!-- 頂部環境光暈 -->
+  <div class="absolute pointer-events-none"
+       style="top:-80px;left:50%;transform:translateX(-50%);
+              width:560px;height:260px;
+              background:radial-gradient(ellipse,rgba(0,210,255,0.10) 0%,transparent 70%)"></div>
+
+  <!-- ── 驗證卡片 ── -->
+  <div class="login-card relative z-10 w-[92vw] max-w-[440px] rounded-2xl overflow-hidden scan-line"
+       style="background:#080d1a;
+              border:1px solid rgba(0,210,255,0.28);
+              box-shadow:0 0 60px rgba(0,210,255,0.08),0 0 120px rgba(0,210,255,0.04)">
+
+    <!-- 頂部青色光條 -->
+    <div class="h-[2px] w-full"
+         style="background:linear-gradient(90deg,transparent,#00d2ff,transparent)"></div>
+
+    <!-- 卡片 Header -->
+    <div class="px-8 pt-7 pb-1 text-center">
+      <!-- 英文系統標籤 -->
+      <div class="font-mono text-[8px] text-[#00d2ff]/38 tracking-[5px] mb-4">
+        HIGH-DEGREE NURTURING HIGH SCHOOL &nbsp;·&nbsp; CENTRAL DATABASE
+      </div>
+
+      <!-- OAA 徽章 -->
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5"
+           style="background:rgba(0,210,255,0.06);
+                  border:1px solid rgba(0,210,255,0.38);
+                  box-shadow:0 0 20px rgba(0,210,255,0.18),inset 0 0 14px rgba(0,210,255,0.06)">
+        <span class="font-orbitron text-[20px] font-black text-[#00d2ff] glow-cyan">OAA</span>
+      </div>
+
+      <!-- 主標題 -->
+      <div class="font-orbitron text-[15px] font-bold tracking-widest text-[#e8f0fe] mb-1.5">
+        高度育成高等學校
+      </div>
+      <div class="font-mono text-[12px] tracking-[2px] text-[#00d2ff] glow-cyan mb-6">
+        中央數據庫驗證系統
+      </div>
+
+      <!-- 裝飾分隔線 -->
+      <div class="flex items-center gap-3 mb-6">
+        <div class="flex-1 h-px"
+             style="background:linear-gradient(to right,transparent,rgba(0,210,255,0.25))"></div>
+        <span class="font-mono text-[8px] text-[#00d2ff]/38 tracking-[3px]">IDENTITY VERIFICATION</span>
+        <div class="flex-1 h-px"
+             style="background:linear-gradient(to left,transparent,rgba(0,210,255,0.25))"></div>
+      </div>
+    </div>
+
+    <!-- 表單區 -->
+    <div class="px-8 pb-8 space-y-4">
+
+      <!-- 伺服器網域 -->
+      <div>
+        <label class="block font-mono text-[8px] text-[#00d2ff]/50 tracking-[4px] mb-1.5 uppercase">
+          伺服器網域 · DSNS Domain
+        </label>
+        <input id="login-dsns" type="text" value="tp001.1campus.net"
+               class="w-full h-10 px-3 rounded-lg font-mono text-[12px] outline-none
+                      bg-[#050c18] border border-[rgba(0,210,255,0.16)] text-[#c0cfe0]
+                      focus:border-[rgba(0,210,255,0.55)] transition-colors duration-150"
+               style="caret-color:#00d2ff">
+      </div>
+
+      <!-- 學號 -->
+      <div>
+        <label class="block font-mono text-[8px] text-[#00d2ff]/50 tracking-[4px] mb-1.5 uppercase">
+          學號 · Student ID
+        </label>
+        <input id="login-user" type="text" placeholder="輸入學號或帳號"
+               class="w-full h-10 px-3 rounded-lg font-mono text-[12px] outline-none
+                      bg-[#050c18] border border-[rgba(0,210,255,0.16)] text-[#c0cfe0]
+                      focus:border-[rgba(0,210,255,0.55)] transition-colors duration-150"
+               style="caret-color:#00d2ff"
+               onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+      </div>
+
+      <!-- 密碼 -->
+      <div>
+        <label class="block font-mono text-[8px] text-[#00d2ff]/50 tracking-[4px] mb-1.5 uppercase">
+          通行碼 · Access Code
+        </label>
+        <div class="relative">
+          <input id="login-pass" type="password" placeholder="輸入密碼"
+                 class="w-full h-10 pl-3 pr-10 rounded-lg font-mono text-[12px] outline-none
+                        bg-[#050c18] border border-[rgba(0,210,255,0.16)] text-[#c0cfe0]
+                        focus:border-[rgba(0,210,255,0.55)] transition-colors duration-150"
+                 style="caret-color:#00d2ff"
+                 onkeydown="if(event.key==='Enter')doLogin()">
+          <!-- 密碼顯示切換 -->
+          <button type="button" onclick="togglePwd()"
+                  class="absolute right-2.5 top-1/2 -translate-y-1/2
+                         text-[#00d2ff]/32 hover:text-[#00d2ff]/70 transition-colors duration-150">
+            <svg id="pwd-eye" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 錯誤訊息欄 -->
+      <div id="login-error" class="hidden px-3 py-2.5 rounded-lg"
+           style="background:rgba(255,80,80,0.07);border:1px solid rgba(255,80,80,0.28)">
+        <span id="login-errmsg" class="font-mono text-[11px]" style="color:#ff5050"></span>
+      </div>
+
+      <!-- 驗證按鈕 -->
+      <button id="login-btn" onclick="doLogin()"
+              class="relative w-full h-12 rounded-xl font-mono text-[11px] tracking-[3px] font-bold
+                     overflow-hidden transition-all duration-200 mt-1"
+              style="background:linear-gradient(135deg,rgba(0,50,160,0.65),rgba(0,210,255,0.22));
+                     border:1px solid rgba(0,210,255,0.45);
+                     color:#00d2ff;
+                     box-shadow:0 0 20px rgba(0,210,255,0.10),inset 0 0 20px rgba(0,210,255,0.05)">
+        <span id="login-btn-text">開始同步驗證 · AUTHENTICATE</span>
+        <!-- 加載狀態（覆蓋按鈕全區域） -->
+        <span id="login-btn-spin"
+              class="hidden absolute inset-0 flex items-center justify-center gap-2">
+          <svg class="w-3.5 h-3.5 spin" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5">
+            <path d="M21 2v6h-6"/>
+            <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+            <path d="M3 22v-6h6"/>
+            <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+          </svg>
+          驗證中 · AUTHENTICATING...
+        </span>
+      </button>
+
+      <!-- 底部警告文字 -->
+      <p class="text-center font-mono text-[8px] tracking-widest pt-1"
+         style="color:rgba(192,207,224,0.18)">
+        未授權存取將觸發系統警報 · UNAUTHORIZED ACCESS IS PROHIBITED
+      </p>
+    </div>
+
+    <!-- 底部裝飾線 -->
+    <div class="h-px"
+         style="background:linear-gradient(90deg,transparent,rgba(0,210,255,0.15),transparent)"></div>
+  </div>
+</div><!-- /login-overlay -->
+
+
+<!-- ════════════════════════════════════════════════════════
+     HEADER
+════════════════════════════════════════════════════════ -->
+<header class="shrink-0 relative z-20 flex items-center gap-3 px-3 md:px-6 h-[54px]
+               bg-[#050810]/90 backdrop-blur-xl
+               border-b border-[rgba(0,210,255,0.10)]">
+
+  <!-- Logo mark -->
+  <div class="w-9 h-9 shrink-0 rounded-lg border border-[rgba(0,210,255,0.5)] flex items-center justify-center
+              font-orbitron text-[13px] font-black text-[#00d2ff]"
+       style="box-shadow:0 0 10px rgba(0,210,255,0.28),inset 0 0 8px rgba(0,210,255,0.08)">
+    OAA
+  </div>
+
+  <!-- Title block -->
+  <div class="leading-none min-w-0">
+    <div class="font-orbitron text-[11px] md:text-[12px] font-bold tracking-[2px] md:tracking-[3px] text-[#00d2ff] glow-cyan whitespace-nowrap">
+      全面能力指標
+    </div>
+    <div class="hidden md:block font-mono text-[9px] tracking-[2px] text-[#c0cfe0]/40 mt-0.5">
+      東京都立高度育成高等學校
+    </div>
+  </div>
+
+  <div class="flex-1"></div>
+
+  <!-- LIVE indicator (desktop only) -->
+  <div class="hidden md:flex items-center gap-1.5">
+    <div class="w-1.5 h-1.5 rounded-full bg-[#00e5a0] animate-pulse"></div>
+    <span class="font-mono text-[9px] text-[#00e5a0]/75 tracking-widest">線上</span>
+  </div>
+
+  <!-- User info (desktop only) -->
+  <div class="hidden md:flex items-center gap-3 border-l border-[rgba(0,210,255,0.10)] pl-4">
+    <div class="text-right leading-none">
+      <div id="hdr-name" class="font-mono text-[11px] text-[#00d2ff]">—</div>
+      <div id="hdr-role" class="font-mono text-[9px] text-[#c0cfe0]/40 tracking-wider mt-0.5">驗證中…</div>
+    </div>
+    <div class="w-8 h-8 rounded-lg bg-[#0d1526] border border-[rgba(0,210,255,0.15)]
+                flex items-center justify-center text-[18px] shrink-0">👨‍🏫</div>
+  </div>
+
+  <!-- 登出按鈕（桌面） -->
+  <button onclick="doLogout()"
+    class="hidden md:flex items-center gap-1.5 px-3 h-8 rounded-lg font-mono text-[11px] tracking-wider
+           text-[#ff6b6b]/70 border border-[rgba(255,107,107,0.22)] bg-[rgba(255,107,107,0.04)]
+           hover:bg-[rgba(255,107,107,0.10)] hover:border-[rgba(255,107,107,0.48)] hover:text-[#ff6b6b]
+           transition-all duration-200 shrink-0">
+    <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+         stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16 17 21 12 16 7"/>
+      <line x1="21" y1="12" x2="9" y2="12"/>
+    </svg>
+    <span>登出</span>
+  </button>
+
+  <!-- Sync button (full on desktop / icon-only on mobile) -->
+  <button id="sync-btn" onclick="doSync()"
+    class="flex items-center gap-2 px-3 md:px-4 h-8 rounded-lg font-mono text-[11px] tracking-wider
+           text-[#00d2ff] border border-[rgba(0,210,255,0.38)] bg-[rgba(0,210,255,0.07)]
+           hover:bg-[rgba(0,210,255,0.14)] hover:border-[rgba(0,210,255,0.60)]
+           transition-all duration-200 shrink-0">
+    <svg id="sync-icon" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M21 2v6h-6"/>
+      <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+      <path d="M3 22v-6h6"/>
+      <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+    </svg>
+    <span id="sync-text" class="hidden md:inline">同步校務資料</span>
+  </button>
+
+  <!-- Hamburger button (mobile only) -->
+  <button id="hamburger-btn" onclick="toggleMobileMenu()"
+    class="md:hidden flex flex-col justify-center items-center gap-[5px] w-9 h-9 shrink-0
+           rounded-lg border border-[rgba(0,210,255,0.22)] bg-[rgba(0,210,255,0.05)]
+           hover:bg-[rgba(0,210,255,0.10)] transition-colors">
+    <span class="w-[14px] h-px bg-[#00d2ff] block rounded-full"></span>
+    <span class="w-[14px] h-px bg-[#00d2ff] block rounded-full"></span>
+    <span class="w-[14px] h-px bg-[#00d2ff] block rounded-full"></span>
+  </button>
+
+  <!-- Mobile dropdown (absolutely positioned, inside header's relative context) -->
+  <div id="mobile-menu"
+       class="hidden md:hidden absolute top-full right-0 w-64 z-50
+              bg-[#080d1a] border border-[rgba(0,210,255,0.15)] rounded-b-xl rounded-tl-xl
+              shadow-[0_8px_32px_rgba(0,0,0,0.6)] overflow-hidden">
+    <div class="px-4 py-3 flex items-center gap-3 border-b border-[rgba(0,210,255,0.08)]">
+      <div class="w-9 h-9 rounded-lg bg-[#0d1526] border border-[rgba(0,210,255,0.15)]
+                  flex items-center justify-center text-xl shrink-0">👨‍🏫</div>
+      <div class="leading-none flex-1 min-w-0">
+        <div class="font-mono text-[12px] text-[#00d2ff]">田中　老師</div>
+        <div class="font-mono text-[9px] text-[#c0cfe0]/40 tracking-wider mt-0.5">教師 · 管理員</div>
+      </div>
+    </div>
+    <div class="px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-1.5">
+        <div class="w-1.5 h-1.5 rounded-full bg-[#00e5a0] animate-pulse"></div>
+        <span class="font-mono text-[9px] text-[#00e5a0]/75 tracking-widest">系統運作中</span>
+      </div>
+      <span class="font-mono text-[9px] text-[#c0cfe0]/30">v2.4.1</span>
+    </div>
+  </div>
+</header>
+
+
+<!-- ════════════════════════════════════════════════════════
+     BODY  (Sidebar + Main)
+════════════════════════════════════════════════════════ -->
+<div id="body-flex" class="flex flex-1 overflow-hidden relative z-10">
+
+  <!-- ──────────────────────────────────────────
+       LEFT SIDEBAR
+  ────────────────────────────────────────── -->
+  <aside id="sidebar" class="w-screen md:w-[272px] shrink-0 flex flex-col bg-[#080d1a]
+                border-r border-[rgba(0,210,255,0.08)]">
+
+    <!-- Search bar -->
+    <div class="p-3 border-b border-[rgba(0,210,255,0.08)]">
+      <div class="relative">
+        <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#00d2ff]/35"
+             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input id="search-input" type="text"
+               placeholder="搜尋姓名、座號…"
+               oninput="filterStudents()"
+               class="w-full h-9 pl-9 pr-3 rounded-lg text-[13px] font-noto
+                      bg-[#0d1526] border border-[rgba(0,210,255,0.12)]
+                      text-[#e8f0fe] placeholder:text-[#c0cfe0]/28
+                      outline-none focus:border-[rgba(0,210,255,0.45)]
+                      transition-colors duration-150">
+      </div>
+    </div>
+
+    <!-- Class filter -->
+    <div class="px-3 py-2.5 border-b border-[rgba(0,210,255,0.08)]
+                flex items-center gap-1.5">
+      <span class="font-mono text-[9px] text-[#c0cfe0]/35 tracking-widest shrink-0 mr-0.5">班級</span>
+      <button class="cls-btn on" data-cls="ALL" onclick="setFilter('ALL',this)">全部</button>
+      <button class="cls-btn"   data-cls="A"   onclick="setFilter('A',this)">A</button>
+      <button class="cls-btn"   data-cls="B"   onclick="setFilter('B',this)">B</button>
+      <button class="cls-btn"   data-cls="C"   onclick="setFilter('C',this)">C</button>
+      <button class="cls-btn"   data-cls="D"   onclick="setFilter('D',this)">D</button>
+    </div>
+
+    <!-- Quick stats strip -->
+    <div class="grid grid-cols-3 gap-px border-b border-[rgba(0,210,255,0.07)]">
+      <div class="py-2.5 flex flex-col items-center bg-[#0a1020]">
+        <div id="st-count" class="font-orbitron text-sm font-bold text-[#00d2ff]">—</div>
+        <div class="font-mono text-[8px] text-[#c0cfe0]/35 tracking-wider mt-0.5">人數</div>
+      </div>
+      <div class="py-2.5 flex flex-col items-center bg-[#0a1020]">
+        <div id="st-avg" class="font-orbitron text-sm font-bold text-[#00e5a0]">—</div>
+        <div class="font-mono text-[8px] text-[#c0cfe0]/35 tracking-wider mt-0.5">平均</div>
+      </div>
+      <div class="py-2.5 flex flex-col items-center bg-[#0a1020]">
+        <div id="st-top" class="font-orbitron text-sm font-bold text-[#ffd700]">—</div>
+        <div class="font-mono text-[8px] text-[#c0cfe0]/35 tracking-wider mt-0.5">最高</div>
+      </div>
+    </div>
+
+    <!-- Student list -->
+    <div id="student-list" class="flex-1 overflow-y-auto p-2.5 space-y-1.5"></div>
+  </aside>
+
+
+  <!-- ──────────────────────────────────────────
+       RIGHT PANEL
+  ────────────────────────────────────────── -->
+  <main id="detail-main" class="w-screen md:w-auto md:flex-1 overflow-y-auto p-4 md:p-6 bg-[#070b18]">
+
+    <!-- Empty state -->
+    <div id="empty-state"
+         class="h-full flex flex-col items-center justify-center gap-4 text-center">
+      <div class="w-24 h-24 rounded-2xl bg-[#0a1020] border border-[rgba(0,210,255,0.10)]
+                  flex items-center justify-center text-4xl opacity-30">📊</div>
+      <div class="font-orbitron text-[12px] tracking-widest text-[#c0cfe0]/30">請選擇學生</div>
+      <div class="text-[13px] text-[#c0cfe0]/20">請從左側名冊選擇學生，以檢視 OAA 詳細能力評價。</div>
+    </div>
+
+    <!-- Detail panel (hidden until a student is selected) -->
+    <div id="detail-panel" class="hidden max-w-[680px] mx-auto space-y-4">
+
+      <!-- ── Back button (mobile only) ── -->
+      <button onclick="goBack()"
+              class="md:hidden flex items-center gap-2 h-9 px-4 rounded-xl
+                     font-mono text-[12px] tracking-wider text-[#00d2ff]
+                     border border-[rgba(0,210,255,0.28)] bg-[rgba(0,210,255,0.06)]
+                     hover:bg-[rgba(0,210,255,0.12)] transition-colors active:scale-95">
+        <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+        返回列表
+      </button>
+
+      <!-- ── Profile card ── -->
+      <div class="rounded-2xl border border-[rgba(0,210,255,0.18)] bg-[#0a1020]
+                  overflow-hidden relative corners scan-line"
+           style="box-shadow:0 0 36px rgba(0,210,255,0.06)">
+
+        <!-- Gradient top line -->
+        <div class="absolute top-0 inset-x-0 h-px
+                    bg-gradient-to-r from-transparent via-[rgba(0,210,255,0.55)] to-transparent">
+        </div>
+
+        <div class="p-6 flex gap-6 items-start">
+
+          <!-- Avatar -->
+          <div class="relative shrink-0 mt-1">
+            <div class="absolute -inset-2.5 rounded-xl border border-[rgba(0,210,255,0.28)] pulse-ring"></div>
+            <div id="p-avatar"
+                 class="relative w-[88px] h-[88px] rounded-xl bg-[#0d1526]
+                        border-2 border-[rgba(0,210,255,0.5)]
+                        flex items-center justify-center text-5xl"
+                 style="box-shadow:0 0 22px rgba(0,210,255,0.18),inset 0 0 14px rgba(0,210,255,0.06)">
+              🧑
+            </div>
+          </div>
+
+          <!-- Main info -->
+          <div class="flex-1 min-w-0">
+            <!-- Class tag + seat + ID -->
+            <div class="flex items-center gap-2 mb-2.5 flex-wrap">
+              <span id="p-class"
+                    class="font-orbitron text-[11px] font-bold px-2 py-0.5 rounded
+                           bg-[rgba(0,210,255,0.10)] border border-[rgba(0,210,255,0.28)]
+                           text-[#00d2ff] tracking-widest">
+                2-D
+              </span>
+              <span id="p-seat" class="font-mono text-[10px] text-[#c0cfe0]/50 tracking-wider">座號 007</span>
+              <span class="flex-1"></span>
+              <span class="font-mono text-[9px] text-[#c0cfe0]/28">OAA-ID</span>
+              <span id="p-id" class="font-mono text-[9px] text-[#00d2ff]/45 tracking-wider">TKY-2D-007</span>
+            </div>
+
+            <!-- Name -->
+            <div id="p-name"
+                 class="text-[22px] font-black tracking-wide leading-tight mb-0.5"
+                 style="text-shadow:0 0 18px rgba(0,210,255,0.18)">
+              綾小路 清隆
+            </div>
+            <div id="p-romaji"
+                 class="font-mono text-[10px] text-[#c0cfe0]/45 tracking-[3px] mb-4">
+              AYANOKOJI KIYOTAKA
+            </div>
+
+            <!-- Info chips -->
+            <div class="grid grid-cols-3 gap-2">
+              <div class="rounded-lg bg-[#0d1526] border border-[rgba(0,210,255,0.08)] p-2 text-center">
+                <div class="font-mono text-[8px] text-[#c0cfe0]/35 tracking-widest mb-1">性別</div>
+                <div id="p-gender" class="text-[13px] font-bold">男</div>
+              </div>
+              <div class="rounded-lg bg-[#0d1526] border border-[rgba(0,210,255,0.08)] p-2 text-center">
+                <div class="font-mono text-[8px] text-[#c0cfe0]/35 tracking-widest mb-1">年級</div>
+                <div id="p-year" class="font-orbitron text-[13px] font-bold text-[#00d2ff]">2年級</div>
+              </div>
+              <div class="rounded-lg bg-[#0d1526] border border-[rgba(0,210,255,0.08)] p-2 text-center">
+                <div class="font-mono text-[8px] text-[#c0cfe0]/35 tracking-widest mb-1">更新</div>
+                <div class="font-mono text-[11px] text-[#c0cfe0]/55">2026/05</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overall grade badge -->
+          <div class="shrink-0 flex flex-col items-center gap-1.5 ml-2">
+            <div class="font-mono text-[9px] text-[#c0cfe0]/35 tracking-widest">綜合</div>
+            <div id="p-grade"
+                 class="font-orbitron text-[52px] font-black leading-none"
+                 style="text-shadow:0 0 24px rgba(0,210,255,0.55)">
+              C
+            </div>
+            <div id="p-overall"
+                 class="font-mono text-[11px] text-[#c0cfe0]/50">
+              51.4
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Radar + Metrics row ── -->
+      <div class="grid grid-cols-2 gap-4">
+
+        <!-- Radar chart card -->
+        <div class="rounded-xl border border-[rgba(0,210,255,0.15)] bg-[#0a1020] p-5"
+             style="box-shadow:0 0 20px rgba(0,210,255,0.04)">
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-1 h-4 rounded-full bg-[#00d2ff]"
+                 style="box-shadow:0 0 6px rgba(0,210,255,0.9)"></div>
+            <span class="font-orbitron text-[10px] font-bold text-[#00d2ff] tracking-widest glow-cyan">
+              能力雷達
+            </span>
+          </div>
+          <div class="aspect-square w-full">
+            <canvas id="radar-canvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Metrics card -->
+        <div class="rounded-xl border border-[rgba(0,210,255,0.15)] bg-[#0a1020] p-5 flex flex-col"
+             style="box-shadow:0 0 20px rgba(0,210,255,0.04)">
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-1 h-4 rounded-full bg-[#b060ff]"
+                 style="box-shadow:0 0 6px rgba(176,96,255,0.9)"></div>
+            <span class="font-orbitron text-[10px] font-bold text-[#b060ff] tracking-widest glow-purple">
+              能力指標
+            </span>
+          </div>
+
+          <!-- Academic -->
+          <div class="mb-3">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-[8px] text-[#2979ff]/65 tracking-widest w-[44px]">學力</span>
+                <span class="text-[11px] text-[#c0cfe0]/75 font-medium">學力</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span id="sc-academic" class="font-orbitron text-[15px] font-bold">51</span>
+                <span id="gr-academic"
+                      class="font-mono text-[10px] font-bold px-1.5 py-px rounded
+                             min-w-[28px] text-center border">C</span>
+              </div>
+            </div>
+            <div class="prog-track">
+              <div id="bar-academic" class="prog-fill" style="width:51%"></div>
+            </div>
+          </div>
+
+          <div class="h-px bg-[rgba(0,210,255,0.05)] mb-3"></div>
+
+          <!-- Physical -->
+          <div class="mb-3">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-[8px] text-[#ff8c42]/65 tracking-widest w-[44px]">體能</span>
+                <span class="text-[11px] text-[#c0cfe0]/75 font-medium">身體能力</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span id="sc-physical" class="font-orbitron text-[15px] font-bold">60</span>
+                <span id="gr-physical"
+                      class="font-mono text-[10px] font-bold px-1.5 py-px rounded
+                             min-w-[28px] text-center border">D</span>
+              </div>
+            </div>
+            <div class="prog-track">
+              <div id="bar-physical" class="prog-fill" style="width:60%"></div>
+            </div>
+          </div>
+
+          <div class="h-px bg-[rgba(0,210,255,0.05)] mb-3"></div>
+
+          <!-- Adaptive thinking -->
+          <div class="mb-3">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-[8px] text-[#00d2ff]/65 tracking-widest w-[44px]">機轉</span>
+                <span class="text-[11px] text-[#c0cfe0]/75 font-medium">機轉思考力</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span id="sc-adaptive" class="font-orbitron text-[15px] font-bold">37</span>
+                <span id="gr-adaptive"
+                      class="font-mono text-[10px] font-bold px-1.5 py-px rounded
+                             min-w-[28px] text-center border">E</span>
+              </div>
+            </div>
+            <div class="prog-track">
+              <div id="bar-adaptive" class="prog-fill" style="width:37%"></div>
+            </div>
+          </div>
+
+          <div class="h-px bg-[rgba(0,210,255,0.05)] mb-3"></div>
+
+          <!-- Social contribution -->
+          <div class="mb-3">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-[8px] text-[#b060ff]/65 tracking-widest w-[44px]">貢獻度</span>
+                <span class="text-[11px] text-[#c0cfe0]/75 font-medium">社會貢獻度</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span id="sc-social" class="font-orbitron text-[15px] font-bold">60</span>
+                <span id="gr-social"
+                      class="font-mono text-[10px] font-bold px-1.5 py-px rounded
+                             min-w-[28px] text-center border">D</span>
+              </div>
+            </div>
+            <div class="prog-track">
+              <div id="bar-social" class="prog-fill" style="width:60%"></div>
+            </div>
+          </div>
+
+          <!-- Overall (calculated) -->
+          <div class="mt-auto pt-3 border-t border-[rgba(0,210,255,0.08)]
+                      rounded-lg bg-[rgba(0,229,160,0.04)] -mx-1 px-2 py-2.5">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-[8px] text-[#00e5a0]/65 tracking-widest w-[44px]">綜合</span>
+                <span class="text-[11px] text-[#c0cfe0]/75 font-medium">綜合評價</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span id="sc-overall" class="font-orbitron text-[15px] font-bold">51.4</span>
+                <span id="gr-overall"
+                      class="font-mono text-[10px] font-bold px-1.5 py-px rounded
+                             min-w-[28px] text-center border">C</span>
+              </div>
+            </div>
+            <div class="prog-track">
+              <div id="bar-overall" class="prog-fill" style="width:51%"></div>
+            </div>
+            <div class="font-mono text-[8px] text-[#c0cfe0]/22 mt-2 text-right leading-tight">
+              (學力＋身體能力＋機轉思考力＋社會貢獻度×0.5) ÷ 350 × 100
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Exam history card ── -->
+      <div class="rounded-xl border border-[rgba(0,210,255,0.15)] bg-[#0a1020] p-5"
+           style="box-shadow:0 0 20px rgba(0,210,255,0.04)">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-1 h-4 rounded-full bg-[#ffd700]"
+               style="box-shadow:0 0 6px rgba(255,215,0,0.85)"></div>
+          <span class="font-orbitron text-[10px] font-bold text-[#ffd700] tracking-widest glow-gold">
+            考試成績
+          </span>
+          <span class="ml-auto font-mono text-[9px] text-[#c0cfe0]/28 tracking-wider">近期考試成績</span>
+        </div>
+
+        <table class="w-full text-[12px]">
+          <thead>
+            <tr class="border-b border-[rgba(0,210,255,0.07)]">
+              <th class="font-mono text-[9px] text-[#c0cfe0]/38 tracking-wider pb-2 text-left font-normal">科目</th>
+              <th class="font-mono text-[9px] text-[#c0cfe0]/38 tracking-wider pb-2 text-center font-normal">上學期末</th>
+              <th class="font-mono text-[9px] text-[#c0cfe0]/38 tracking-wider pb-2 text-center font-normal">下學期末</th>
+              <th class="font-mono text-[9px] text-[#c0cfe0]/38 tracking-wider pb-2 text-center font-normal">特別考試</th>
+              <th class="font-mono text-[9px] text-[#c0cfe0]/38 tracking-wider pb-2 text-right font-normal">年度總計</th>
+            </tr>
+          </thead>
+          <tbody id="exam-tbody" class="divide-y divide-[rgba(0,210,255,0.04)]"></tbody>
+        </table>
+      </div>
+
+    </div><!-- /detail-panel -->
+  </main>
+</div><!-- /body flex -->
+
+<!-- ════════════════════════════════════════════════════════
+     SYNC MODAL
+     ════════════════════════════════════════════════════════ -->
+<div id="sync-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center"
+     style="background:rgba(5,8,16,0.88);backdrop-filter:blur(6px)">
+  <div class="sync-modal-box relative w-[95vw] md:w-[520px] rounded-2xl overflow-hidden
+              border border-[rgba(0,210,255,0.22)] bg-[#0a1020]">
+
+    <!-- top accent line -->
+    <div class="h-[2px] w-full" style="background:linear-gradient(90deg,transparent,#00d2ff,transparent)"></div>
+
+    <!-- header -->
+    <div class="flex items-center gap-3 px-6 pt-4 pb-3">
+      <span class="w-2 h-2 rounded-full bg-[#00d2ff] shadow-[0_0_6px_#00d2ff] flex-shrink-0" id="smod-dot"></span>
+      <span class="font-mono text-[13px] text-[#00d2ff] tracking-widest flex-1" id="smod-stage">校務數據核心同步中，請勿關閉網頁...</span>
+      <button onclick="closeSyncModal()"
+              class="text-[#4a6a8a] hover:text-[#00d2ff] transition-colors text-[18px] leading-none font-mono">✕</button>
+    </div>
+
+    <!-- progress bar -->
+    <div class="px-6 pb-3">
+      <div class="relative h-[6px] rounded-full overflow-hidden bg-[rgba(0,210,255,0.08)]">
+        <div id="smod-bar" class="h-full rounded-full transition-all duration-500 ease-out"
+             style="width:0%;background:linear-gradient(90deg,#0050b3,#00d2ff)"></div>
+      </div>
+      <div class="flex justify-between mt-1.5">
+        <span class="font-mono text-[10px] text-[#3a5a7a]">同步進度</span>
+        <span id="smod-pct" class="font-mono text-[10px] text-[#00d2ff]">0%</span>
+      </div>
+    </div>
+
+    <!-- terminal block -->
+    <div class="mx-6 mb-4 rounded-xl overflow-hidden border border-[rgba(0,210,255,0.10)]">
+      <!-- mac-style title bar -->
+      <div class="flex items-center gap-1.5 px-3 py-2 bg-[#060d18]">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#ff5f57]"></span>
+        <span class="w-2.5 h-2.5 rounded-full bg-[#febc2e]"></span>
+        <span class="w-2.5 h-2.5 rounded-full bg-[#28c840]"></span>
+        <span class="ml-auto font-mono text-[10px] text-[#2a4a6a]">同步串流 — 終端機</span>
+      </div>
+      <!-- terminal output -->
+      <div id="sync-terminal"
+           class="h-[140px] md:h-[180px] overflow-y-auto p-3 bg-[#050c18] font-mono text-[10px] md:text-[12px] leading-relaxed">
+      </div>
+    </div>
+
+    <!-- done bar (hidden until sync completes) -->
+    <div id="smod-done" class="hidden mx-6 mb-4 px-4 py-2.5 rounded-xl
+                               bg-[rgba(0,229,160,0.08)] border border-[rgba(0,229,160,0.25)]
+                               flex items-center gap-2">
+      <span class="text-[#00e5a0] text-[18px]">✓</span>
+      <span class="font-mono text-[13px] text-[#00e5a0]">同步成功 — <span id="smod-countdown">2</span> 秒後自動關閉</span>
+    </div>
+
+    <!-- error bar (hidden until error) -->
+    <div id="smod-error" class="hidden mx-6 mb-4 px-4 py-2.5 rounded-xl
+                                bg-[rgba(255,80,80,0.08)] border border-[rgba(255,80,80,0.25)]
+                                flex items-center gap-2">
+      <span class="text-[#ff5050] text-[18px]">✗</span>
+      <span id="smod-errmsg" class="font-mono text-[12px] text-[#ff5050] flex-1">錯誤</span>
+      <button onclick="closeSyncModal()"
+              class="font-mono text-[11px] text-[#ff5050] border border-[rgba(255,80,80,0.4)]
+                     px-3 py-1 rounded-lg hover:bg-[rgba(255,80,80,0.12)] transition-colors">關閉</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// DATA — fake students (Classroom of the Elite cast)
+// ═══════════════════════════════════════════════════════
+const STUDENTS = [];
+
+const EXAMS = {};
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let selectedId  = null;
+let classFilter = 'ALL';
+let searchQuery = '';
+let radarChart  = null;
+
+// ═══════════════════════════════════════════════════════
+// GRADE HELPERS  (matches existing OAA.html logic)
+// ═══════════════════════════════════════════════════════
+function calcOverall(s) {
+  return (s.ac + s.ph + s.ad + s.so * 0.5) / 350 * 100;
+}
+
+// ── 等級轉換 ────────────────────────────────────────────
+// 區間根據 OAA 卡截圖錨點反推：51→C、60→C+、37→D+
+// S+ ≥96 · S ≥91 · A+ ≥86 · A ≥81 · B+ ≥76 · B ≥71
+// C+ ≥60 · C  ≥50 · D+ ≥35 · D  ≥20 · E  <20
+function getGrade(score) {
+  const s = Math.round(score);
+  if (s >= 96) return 'S+';
+  if (s >= 91) return 'S';
+  if (s >= 86) return 'A+';
+  if (s >= 81) return 'A';
+  if (s >= 76) return 'B+';
+  if (s >= 71) return 'B';
+  if (s >= 60) return 'C+'; // 60→C+ ✓
+  if (s >= 50) return 'C';  // 51→C  ✓
+  if (s >= 35) return 'D+'; // 37→D+ ✓
+  if (s >= 20) return 'D';
+  return 'E';
+}
+
+const GRADE_CLR = {
+  'S+': '#ffe566', // 亮金
+  'S':  '#ffd700', // 金
+  'A+': '#40e0ff', // 亮青
+  'A':  '#00d2ff', // 青
+  'B+': '#1affb0', // 亮綠
+  'B':  '#00e5a0', // 綠
+  'C+': '#4f9dff', // 亮藍
+  'C':  '#2979ff', // 藍
+  'D+': '#ffa55a', // 亮橘
+  'D':  '#ff8c42', // 橘
+  'E':  '#ff5050', // 紅
+};
+
+function gc(g) { return GRADE_CLR[g] || '#c0cfe0'; }
+
+// ═══════════════════════════════════════════════════════
+// FILTER
+// ═══════════════════════════════════════════════════════
+function visible() {
+  const q = searchQuery.toLowerCase();
+  return STUDENTS
+    .filter(s => classFilter === 'ALL' || s.cls === classFilter)
+    .filter(s => !q ||
+      s.name.includes(searchQuery) ||
+      s.romaji.toLowerCase().includes(q) ||
+      String(s.seat).padStart(2, '0').includes(q))
+    .sort((a, b) => {
+      const classOrder = { A: 0, B: 1, C: 2, D: 3 };
+      if (a.cls !== b.cls) return classOrder[a.cls] - classOrder[b.cls];
+      return a.seat - b.seat;
+    });
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER: Sidebar list
+// ═══════════════════════════════════════════════════════
+function renderList() {
+  const list  = document.getElementById('student-list');
+  const items = visible();
+
+  // Stats strip
+  document.getElementById('st-count').textContent = items.length;
+  if (items.length) {
+    const overalls = items.map(calcOverall);
+    const avg = overalls.reduce((a, b) => a + b, 0) / items.length;
+    document.getElementById('st-avg').textContent = avg.toFixed(1);
+    const topScore = Math.max(...overalls);
+    document.getElementById('st-top').textContent = getGrade(topScore);
+  } else {
+    document.getElementById('st-avg').textContent = '—';
+    document.getElementById('st-top').textContent = '—';
+  }
+
+  if (!items.length) {
+    list.innerHTML = `<div class="py-12 text-center font-mono text-[11px] text-[#c0cfe0]/28 tracking-widest">
+      查無資料
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = items.map(s => {
+    const ov = calcOverall(s);
+    const g  = getGrade(ov);
+    const c  = gc(g);
+    const active = s.id === selectedId ? 'active' : '';
+    return `
+    <div class="s-card ${active}" onclick="selectStudent(${s.id})">
+      <div class="w-10 h-10 shrink-0 rounded-lg bg-[#0a1020] border border-[rgba(0,210,255,0.10)]
+                  flex items-center justify-center text-xl leading-none">${s.av}</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-[13px] font-bold text-[#e8f0fe] truncate">${s.name}</div>
+        <div class="flex items-center gap-1.5 mt-0.5">
+          <span class="font-orbitron text-[9px] text-[#00d2ff]/60">${s.year}-${s.cls}</span>
+          <span class="text-[#c0cfe0]/22">·</span>
+          <span class="font-mono text-[9px] text-[#c0cfe0]/45">座${String(s.seat).padStart(3,'0')}</span>
+        </div>
+      </div>
+      <div class="flex flex-col items-end gap-0.5 shrink-0">
+        <div class="font-orbitron text-base font-black"
+             style="color:${c};text-shadow:0 0 8px ${c}88">${g}</div>
+        <div class="font-mono text-[9px]" style="color:${c}70">${ov.toFixed(1)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER: Detail panel
+// ═══════════════════════════════════════════════════════
+function selectStudent(id) {
+  const s = STUDENTS.find(x => x.id === id);
+  if (!s) return;
+  updateDashboard(s); // 委派給 updateDashboard
+}
+
+function setMetric(key, score, defaultColor, isFloat = false) {
+  const scEl  = document.getElementById(`sc-${key}`);
+  const grEl  = document.getElementById(`gr-${key}`);
+  const barEl = document.getElementById(`bar-${key}`);
+
+  const g = getGrade(score);
+  const c = gc(g);
+
+  scEl.textContent  = isFloat ? score.toFixed(1) : Math.round(score);
+  scEl.style.color  = c;
+
+  grEl.textContent        = g;
+  grEl.style.color        = c;
+  grEl.style.background   = `${c}18`;
+  grEl.style.borderColor  = `${c}35`;
+
+  barEl.style.width      = `${Math.min(100, score)}%`;
+  barEl.style.background = c;
+  barEl.style.boxShadow  = `0 0 8px ${c}80`;
+}
+
+// ═══════════════════════════════════════════════════════
+// RADAR CHART
+// ═══════════════════════════════════════════════════════
+// ── 科幻雷達圖自訂 Plugin（繪製背景 + 同心多邊形刻度線）────
+const sciFiRadarPlugin = {
+  id: 'sciFiRadar',
+  beforeDraw(chart) {
+    const { ctx, chartArea, scales: { r } } = chart;
+    if (!r) return;
+    ctx.save();
+
+    // 深色背景填滿整個雷達區域
+    const cx = r.xCenter, cy = r.yCenter;
+    const labels = chart.data.labels;
+    const n = labels.length;
+    const maxR = r.drawingArea;
+
+    // 繪製 4 層同心多邊形（25 / 50 / 75 / 100）
+    [0.25, 0.5, 0.75, 1].forEach((ratio, i) => {
+      const r_ = maxR * ratio;
+      ctx.beginPath();
+      for (let j = 0; j < n; j++) {
+        const angle = (2 * Math.PI * j) / n - Math.PI / 2;
+        const x = cx + r_ * Math.cos(angle);
+        const y = cy + r_ * Math.sin(angle);
+        j === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      // 最外層稍亮
+      ctx.strokeStyle = i === 3
+        ? 'rgba(0,210,255,0.25)'
+        : 'rgba(0,210,255,0.10)';
+      ctx.lineWidth = i === 3 ? 1.2 : 0.8;
+      ctx.stroke();
+
+      // 刻度數字（25 / 50 / 75）
+      if (i < 3) {
+        ctx.fillStyle = 'rgba(192,207,224,0.28)';
+        const scaleFontSz = chart.canvas.offsetWidth < 180 ? 7 : 9;
+        ctx.font = `${scaleFontSz}px 'Share Tech Mono'`;
+        ctx.textAlign = 'center';
+        ctx.fillText(String(Math.round(ratio * 100)), cx + 4, cy - r_ + 10);
+      }
+    });
+
+    ctx.restore();
+  }
+};
+
+function renderRadar(s) {
+  const canvas = document.getElementById('radar-canvas');
+  const ctx    = canvas.getContext('2d');
+
+  // Canvas glow（CSS filter）
+  canvas.style.filter = 'drop-shadow(0 0 8px rgba(0,210,255,0.45))';
+
+  // 響應式參數：手機版縮小字體與頂點，防止軸標籤超出容器
+  const mob      = window.innerWidth < 768;
+  const labelSz  = mob ? 8 : 10;
+  const labelPad = mob ? 3 : 6;
+  const ptR      = mob ? 3 : 5;
+  const ptHR     = mob ? 5 : 7;
+
+  if (radarChart) radarChart.destroy();
+
+  radarChart = new Chart(ctx, {
+    type: 'radar',
+    plugins: [sciFiRadarPlugin],
+    data: {
+      labels: ['學力', '身體能力', '機轉思考力', '社會貢獻度'],
+      datasets: [{
+        data: [s.ac, s.ph, s.ad, s.so],
+        // 螢光藍填充（帶透明度）
+        backgroundColor: 'rgba(0,210,255,0.13)',
+        // 螢光藍邊框
+        borderColor: '#00d2ff',
+        borderWidth: 2,
+        // 頂點光點
+        pointBackgroundColor: '#00d2ff',
+        pointBorderColor: '#050810',
+        pointBorderWidth: 2,
+        pointRadius: ptR,
+        pointHoverRadius: ptHR,
+        pointHoverBackgroundColor: '#40e0ff',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      animation: { duration: 650, easing: 'easeOutQuart' },
+      scales: {
+        r: {
+          min: 0, max: 100,
+          // 隱藏預設網格與刻度（改用自訂 Plugin）
+          ticks:       { display: false },
+          grid:        { display: false },
+          angleLines:  { color: 'rgba(0,210,255,0.18)', lineWidth: 1 },
+          pointLabels: {
+            color: '#c0cfe0',
+            font:  { family: "'Share Tech Mono'", size: labelSz, weight: '400' },
+            padding: labelPad,
+          },
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(5,8,16,0.94)',
+          borderColor:     'rgba(0,210,255,0.35)',
+          borderWidth: 1,
+          titleColor: '#00d2ff',
+          bodyColor:  '#e8f0fe',
+          titleFont: { family: "'Share Tech Mono'", size: 11 },
+          bodyFont:  { family: "'Share Tech Mono'", size: 11 },
+          padding: 10,
+          callbacks: {
+            label: ctx => {
+              const g = getGrade(ctx.raw);
+              return `  ${ctx.label}：${ctx.raw}  【${g}】`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// EXAM TABLE
+// ═══════════════════════════════════════════════════════
+function renderExams(id) {
+  const rows  = EXAMS[id] || [
+    ['數學',     '—', '—', '—', '—'],
+    ['現代國文', '—', '—', '—', '—'],
+    ['英文',     '—', '—', '—', '—'],
+    ['體育',     '—', '—', '—', '—'],
+  ];
+  const tbody = document.getElementById('exam-tbody');
+  tbody.innerHTML = rows.map(([subj, q1, q2, sp, total]) => {
+    const totalNum = Number(total);
+    const col = (total !== '—' && !isNaN(totalNum))
+      ? gc(getGrade(totalNum))
+      : 'rgba(192,207,224,0.4)';
+    return `<tr>
+      <td class="py-2.5 pr-3 text-[12px] font-medium text-[#e8f0fe]/75">${subj}</td>
+      <td class="py-2.5 text-center font-mono text-[11px] text-[#c0cfe0]/55">${q1}</td>
+      <td class="py-2.5 text-center font-mono text-[11px] text-[#c0cfe0]/55">${q2}</td>
+      <td class="py-2.5 text-center font-mono text-[11px] text-[#00d2ff]/70">${sp}</td>
+      <td class="py-2.5 text-right font-orbitron text-[12px] font-bold"
+          style="color:${col}">${total}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// FILTER ACTIONS
+// ═══════════════════════════════════════════════════════
+function setFilter(cls, btn) {
+  classFilter = cls;
+  document.querySelectorAll('.cls-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  renderList();
+}
+
+function filterStudents() {
+  searchQuery = document.getElementById('search-input').value.trim();
+  renderList();
+}
+
+// ═══════════════════════════════════════════════════════
+// SYNC MODAL — SSE 同步
+// ═══════════════════════════════════════════════════════
+
+// ── 取得 JWT token（localStorage / sessionStorage）─────
+function getAuthToken() {
+  return sessionStorage.getItem('oaa_token') || localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+}
+
+function doLogout() {
+  localStorage.removeItem('token');
+  location.href = '/login';
+}
+
+// ── Modal 狀態 ─────────────────────────────────────────
+let _syncAbort = null;
+let _syncCountdownTimer = null;
+
+function openSyncModal() {
+  document.getElementById('smod-stage').textContent        = '校務數據核心同步中，請勿關閉網頁...';
+  document.getElementById('smod-dot').style.background     = '#00d2ff';
+  document.getElementById('smod-dot').style.boxShadow      = '0 0 6px #00d2ff';
+  document.getElementById('smod-bar').style.width          = '0%';
+  document.getElementById('smod-pct').textContent          = '0%';
+  document.getElementById('sync-terminal').innerHTML       = '';
+  document.getElementById('smod-done').classList.add('hidden');
+  document.getElementById('smod-error').classList.add('hidden');
+  document.getElementById('sync-modal').classList.remove('hidden');
+}
+
+function closeSyncModal() {
+  document.getElementById('sync-modal').classList.add('hidden');
+  if (_syncAbort)          { _syncAbort.abort(); _syncAbort = null; }
+  if (_syncCountdownTimer) { clearInterval(_syncCountdownTimer); _syncCountdownTimer = null; }
+}
+
+// ── 終端機輸出 ─────────────────────────────────────────
+function appendTerminalLine(text, type = 'info') {
+  const COLOR = { info:'#c0cfe0', ok:'#00e5a0', warn:'#ffa55a', err:'#ff5050', dim:'#3a5a7a' };
+  const TAG   = { info:'同步',    ok:'成功',    warn:'警告',    err:'錯誤',    dim:'系統' };
+  const now   = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+  const term  = document.getElementById('sync-terminal');
+  const line  = document.createElement('div');
+  line.className = 'term-line flex gap-2';
+  line.innerHTML =
+    `<span class="text-[#2a4a6a] flex-shrink-0">${now}</span>` +
+    `<span style="color:rgba(0,210,255,0.5)" class="flex-shrink-0">[${TAG[type] ?? 'INFO'}]</span>` +
+    `<span class="term-text" style="color:${COLOR[type] ?? COLOR.info}">${text}</span>`;
+  term.appendChild(line);
+  term.scrollTop = term.scrollHeight;
+}
+
+// ── 進度條更新 ─────────────────────────────────────────
+function updateProgress(pct, label) {
+  const p = Math.max(0, Math.min(100, Math.round(pct)));
+  document.getElementById('smod-bar').style.width  = p + '%';
+  document.getElementById('smod-pct').textContent  = p + '%';
+  if (label) document.getElementById('smod-stage').textContent = label;
+}
+
+// ── SSE 事件分派 ───────────────────────────────────────
+function handleSSEEvent(raw) {
+  let data;
+  try { data = JSON.parse(raw); } catch { return; }
+
+  // 新格式（server.py type-based）
+  if (data.type === 'student') {
+    let s = STUDENTS.find(s => s.id === data.id);
+    if (!s) {
+      s = { id: data.id, name: data.name, romaji: '', cls: '?', year: 1, seat: 0, gender: '—', av: '🧑', ac: 0, ph: 0, ad: 0, so: 0 };
+      STUDENTS.push(s);
+    }
+    s.ac = data.ac ?? s.ac;
+    s.ph = data.ph ?? s.ph;
+    s.ad = data.ad ?? s.ad;
+    s.so = data.so ?? s.so;
+    renderList();
+    if (selectedId === s.id) updateDashboard(s);
+    appendTerminalLine(`${data.name}｜綜合 ${data.overall ?? '—'} · ${data.grade ?? '—'}`, 'info');
+    return;
+  }
+  if (data.type === 'done')  { onSyncDone(); return; }
+  if (data.type === 'error') { showSyncError(data.message ?? '未知錯誤'); return; }
+
+  // 舊格式（向後相容）
+  if (data.error)         { showSyncError(data.error); return; }
+  if (data.done)          { onSyncDone(); return; }
+  if (data.pct   != null) updateProgress(data.pct, data.label ?? null);
+  if (data.label != null) appendTerminalLine(data.label, 'info');
+}
+
+function showSyncError(msg) {
+  document.getElementById('smod-errmsg').textContent      = msg;
+  document.getElementById('smod-error').classList.remove('hidden');
+  document.getElementById('smod-dot').style.background    = '#ff5050';
+  document.getElementById('smod-dot').style.boxShadow     = '0 0 6px #ff5050';
+  appendTerminalLine(msg, 'err');
+}
+
+function onSyncDone() {
+  updateProgress(100, '校務數據同步完畢');
+  appendTerminalLine('高度育成高等學校 OAA 數據庫同步完畢。', 'ok');
+  document.getElementById('smod-dot').style.background    = '#00e5a0';
+  document.getElementById('smod-dot').style.boxShadow     = '0 0 6px #00e5a0';
+  document.getElementById('smod-done').classList.remove('hidden');
+
+  let n = 2;
+  document.getElementById('smod-countdown').textContent = n;
+  _syncCountdownTimer = setInterval(() => {
+    n--;
+    document.getElementById('smod-countdown').textContent = n;
+    if (n <= 0) {
+      clearInterval(_syncCountdownTimer);
+      _syncCountdownTimer = null;
+      closeSyncModal();
+      renderList();
+      if (!selectedId && STUDENTS[0]) updateDashboard(STUDENTS[0]);
+    }
+  }, 1000);
+}
+
+// ── fetch + ReadableStream SSE 解析 ───────────────────
+async function runSyncSSE() {
+  const token = getAuthToken();
+  _syncAbort  = new AbortController();
+  appendTerminalLine('啟動安全遠端驗證通道...', 'dim');
+
+  let res;
+  try {
+    res = await fetch('/api/sync-all-stream', {
+      headers: { Authorization: token ? `Bearer ${token}` : '' },
+      signal:  _syncAbort.signal,
+    });
+  } catch (e) {
+    if (e.name !== 'AbortError') showSyncError('遠端連線中斷：請確認網路狀態後重試。');
+    return;
+  }
+
+  if (!res.ok) { showSyncError('驗證失敗：請檢查學號與密碼是否正確，或遠端連線是否中斷。'); return; }
+
+  appendTerminalLine('連線成功，正在接收校務數據流...', 'dim');
+
+  const reader  = res.body.getReader();
+  const decoder = new TextDecoder();
+  let   buf     = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split('\n\n');
+      buf = parts.pop();           // 保留最後不完整的片段
+
+      for (const block of parts) {
+        if (block.startsWith(': ')) continue;          // heartbeat 忽略
+        const dl = block.split('\n').find(l => l.startsWith('data: '));
+        if (dl) handleSSEEvent(dl.slice(6).trim());
+      }
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') showSyncError('資料流中斷：' + e.message);
+  }
+}
+
+// ── 手機版面板切換 ─────────────────────────────────────
+function goBack() {
+  document.getElementById('body-flex').classList.remove('show-detail');
+}
+
+function toggleMobileMenu() {
+  document.getElementById('mobile-menu').classList.toggle('hidden');
+}
+
+// 點擊漢堡選單外側自動收合
+document.addEventListener('click', function(e) {
+  const menu = document.getElementById('mobile-menu');
+  const btn  = document.getElementById('hamburger-btn');
+  if (menu && !menu.classList.contains('hidden') &&
+      !menu.contains(e.target) && !btn.contains(e.target)) {
+    menu.classList.add('hidden');
+  }
+});
+
+// ── SYNC BUTTON 入口 ───────────────────────────────────
+function doSync() {
+  const icon = document.getElementById('sync-icon');
+  icon.classList.add('spin');
+  setTimeout(() => icon.classList.remove('spin'), 1000);
+  openSyncModal();
+  runSyncSSE();
+}
+
+// ═══════════════════════════════════════════════════════
+// updateDashboard — 統一入口函式
+// ═══════════════════════════════════════════════════════
+/**
+ * 傳入學生資料物件，同時更新：
+ *   - 左側名冊的 active 狀態
+ *   - 右側所有文字欄位（姓名、班級、座號…）
+ *   - 等級標籤（getGrade 轉換）與進度條
+ *   - Chart.js 雷達圖
+ *   - 試驗成績表
+ *
+ * @param {Object} studentData
+ * @param {number} studentData.id     - 對應 STUDENTS 陣列的 id（可選）
+ * @param {string} studentData.name   - 姓名
+ * @param {string} studentData.romaji - 羅馬拼音
+ * @param {string} studentData.cls    - 班級（'A'|'B'|'C'|'D'）
+ * @param {number} studentData.year   - 年級
+ * @param {number} studentData.seat   - 座號
+ * @param {string} studentData.gender - 性別
+ * @param {string} [studentData.av]   - 頭像 emoji
+ * @param {number} studentData.ac     - 学力 0-100
+ * @param {number} studentData.ph     - 身体能力 0-100
+ * @param {number} studentData.ad     - 機転思考力 0-100
+ * @param {number} studentData.so     - 社会貢献性 0-100
+ */
+function updateDashboard(studentData) {
+  const s = studentData;
+
+  // ① 更新 selectedId（若有對應 STUDENTS 記錄）
+  if (s.id != null) selectedId = s.id;
+
+  // ② 顯示右側面板
+  document.getElementById('empty-state').classList.add('hidden');
+  const panel = document.getElementById('detail-panel');
+  panel.classList.remove('hidden', 'fade-up');
+  void panel.offsetWidth; // 強制 reflow，重新觸發動畫
+  panel.classList.add('fade-up');
+
+  // ③ 手機版：滑動至詳細面板，同時關閉漢堡選單
+  if (window.innerWidth < 768) {
+    document.getElementById('body-flex').classList.add('show-detail');
+    document.getElementById('mobile-menu').classList.add('hidden');
+  }
+
+  // ④ 填入基本資料
+  document.getElementById('p-avatar').textContent = s.av  ?? '🧑';
+  document.getElementById('p-class').textContent  = `${s.year}-${s.cls}`;
+  document.getElementById('p-seat').textContent   = `座號 ${String(s.seat).padStart(3,'0')}`;
+  document.getElementById('p-id').textContent     = `TKY-${s.year}${s.cls}-${String(s.seat).padStart(3,'0')}`;
+  document.getElementById('p-name').textContent   = s.name;
+  document.getElementById('p-romaji').textContent = s.romaji ?? '';
+  document.getElementById('p-gender').textContent = s.gender ?? '—';
+  document.getElementById('p-year').textContent   = `${s.year}年級`;
+
+  // ④ 計算總合力並更新大等級字
+  const ov  = calcOverall(s);
+  const og  = getGrade(ov);
+  const oc  = gc(og);
+  const grEl = document.getElementById('p-grade');
+  grEl.textContent      = og;
+  grEl.style.color      = oc;
+  grEl.style.textShadow = `0 0 28px ${oc}BB`;
+  document.getElementById('p-overall').textContent = ov.toFixed(1);
+
+  // ⑤ 各指標進度條 + 等級標籤
+  setMetric('academic', s.ac, '#2979ff');
+  setMetric('physical', s.ph, '#ff8c42');
+  setMetric('adaptive', s.ad, '#00d2ff');
+  setMetric('social',   s.so, '#b060ff');
+  setMetric('overall',  ov,   '#00e5a0', true);
+
+  // ⑥ 雷達圖
+  renderRadar(s);
+
+  // ⑦ 試驗成績表
+  renderExams(s.id ?? null);
+
+  // ⑧ 重繪名冊以更新 active 狀態
+  renderList();
+}
+
+// ═══════════════════════════════════════════════════════
+// LOGIN — 登入遮罩邏輯
+// ═══════════════════════════════════════════════════════
+
+/** 密碼顯示／隱藏切換 */
+function togglePwd() {
+  const inp    = document.getElementById('login-pass');
+  const eye    = document.getElementById('pwd-eye');
+  const isHide = inp.type === 'password';
+  inp.type     = isHide ? 'text' : 'password';
+  eye.innerHTML = isHide
+    // eye-off（顯示中）
+    ? `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8
+               a18.45 18.45 0 0 1 5.06-5.94"/>
+       <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8
+               a18.5 18.5 0 0 1-2.16 3.19"/>
+       <line x1="1" y1="1" x2="23" y2="23"/>`
+    // eye（隱藏中）
+    : `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+       <circle cx="12" cy="12" r="3"/>`;
+}
+
+/** 在表單下方顯示紅色錯誤訊息 */
+function showLoginError(msg) {
+  document.getElementById('login-errmsg').textContent = msg;
+  document.getElementById('login-error').classList.remove('hidden');
+}
+
+/** 以淡出動畫關閉登入遮罩 */
+function dismissLoginOverlay() {
+  const ov = document.getElementById('login-overlay');
+  ov.classList.add('fading');
+  ov.addEventListener('animationend', () => ov.classList.add('gone'), { once: true });
+}
+
+/**
+ * 將後端 profile 映射到前端 STUDENTS 格式，再呼叫 updateDashboard()。
+ * 優先以姓名或羅馬拼音比對本地陣列；找不到時用預設 OAA 分數 60 填充。
+ */
+function renderAfterLogin(profile) {
+  const match = STUDENTS.find(s =>
+    s.name === profile.name || s.romaji === profile.romaji
+  );
+  if (match) { updateDashboard(match); return; }
+
+  // 找不到對應學生 → 以 profile 建構最小物件
+  updateDashboard({
+    id:     null,
+    name:   profile.name   ?? '未知學生',
+    romaji: profile.romaji ?? '',
+    cls:    profile.class  ?? profile.cls ?? '?',
+    year:   profile.year   ?? 1,
+    seat:   profile.seat   ?? 0,
+    gender: ({ M: '男', F: '女' })[profile.gender] ?? profile.gender ?? '—',
+    av:     '🧑',
+    ac: 60, ph: 60, ad: 60, so: 60,
+  });
+}
+
+/**
+ * 登入主流程：
+ *   1. 鎖定按鈕 → 顯示加載動畫
+ *   2. POST /api/login
+ *   3. 成功 → 存 sessionStorage → 淡出遮罩 → 渲染學生
+ *   4. 失敗 → 顯示錯誤訊息
+ *   5. finally → 恢復按鈕
+ */
+async function doLogin() {
+  const btn     = document.getElementById('login-btn');
+  const btnText = document.getElementById('login-btn-text');
+  const btnSpin = document.getElementById('login-btn-spin');
+
+  // ① 鎖定 UI
+  btn.disabled = true;
+  btnText.classList.add('hidden');
+  btnSpin.classList.remove('hidden');
+  document.getElementById('login-error').classList.add('hidden');
+
+  const dsns     = (document.getElementById('login-dsns').value || '').trim() || 'tp001.1campus.net';
+  const username = (document.getElementById('login-user').value || '').trim();
+  const password =  document.getElementById('login-pass').value || '';
+
+  try {
+    const res  = await fetch('/api/login', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ username, password, dsns_domain: dsns }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      // 後端回傳 401（帳密錯誤）或 400（系統異常）
+      showLoginError(data.detail ?? '驗證失敗，請稍後再試。');
+      return;
+    }
+
+    // ② 登入成功 → 存入 sessionStorage
+    sessionStorage.setItem('oaa_token',   data.access_token   ?? '');
+    sessionStorage.setItem('oaa_cookie',  data.session_cookie ?? '');
+    sessionStorage.setItem('oaa_profile', JSON.stringify(data.profile ?? {}));
+
+    // ③ 淡出遮罩 + 渲染儀表板
+    dismissLoginOverlay();
+    renderAfterLogin(data.profile ?? {});
+
+  } catch {
+    showLoginError('連線失敗：請確認後端服務已啟動（http://localhost:8000）。');
+  } finally {
+    // ④ 恢復按鈕
+    btn.disabled = false;
+    btnText.classList.remove('hidden');
+    btnSpin.classList.add('hidden');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+renderList();
+
+// OAuth 回調：URL 帶有 ?token= 時，存入 localStorage 並清除 URL
+const _urlToken = new URLSearchParams(window.location.search).get('token');
+if (_urlToken) {
+  localStorage.setItem('token', _urlToken);
+  window.history.replaceState({}, '', '/dashboard');
+}
+
+// Auth guard：未登入則跳至登入頁（相容 localStorage.token 與 sessionStorage.oaa_token）
+const _token = localStorage.getItem('token') || sessionStorage.getItem('oaa_token') || '';
+if (!_token) {
+  location.href = '/login';
+} else {
+  document.getElementById('login-overlay').classList.add('gone');
+
+  // 解碼 JWT，顯示真實帳號資訊
+  try {
+    const _p = JSON.parse(atob(_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+    document.getElementById('hdr-name').textContent = _p.name || _p.sub || '已登入';
+    document.getElementById('hdr-role').textContent = _p.sub  || '';
+  } catch { /* 非標準 token，保持預設值 */ }
+
+  const _raw = sessionStorage.getItem('oaa_profile');
+  if (_raw) {
+    try { renderAfterLogin(JSON.parse(_raw)); }
+    catch { if (window.innerWidth >= 768 && STUDENTS[0]) updateDashboard(STUDENTS[0]); }
+  } else if (window.innerWidth >= 768 && STUDENTS[0]) {
+    updateDashboard(STUDENTS[0]);
+  }
+}
+</script>
+</body>
+</html>
