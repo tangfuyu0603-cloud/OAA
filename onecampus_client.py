@@ -654,7 +654,7 @@ def calc_academic(subjects: list[dict]) -> float:
 
 
 def calc_conduct(counts: dict) -> float:
-    """行動力分數：基準 70 加減獎懲積分，夾限 0–100。
+    """機轉思考力：基準 70 加減獎懲積分，夾限 0–100。
     嘉獎 +1、小功 +3、大功 +9、警告 -1、小過 -3、大過 -9"""
     score = 70.0 + (
         counts.get("嘉獎", 0) * 1 +
@@ -664,6 +664,26 @@ def calc_conduct(counts: dict) -> float:
         counts.get("小過", 0) * 3 -
         counts.get("大過", 0) * 9
     )
+    return round(min(100.0, max(0.0, score)), 1)
+
+
+def calc_social(
+    counts: dict,
+    cadre_score: float = 0.0,      # 幹部加分（待串接：班長+5、社長+8、學生會+10，上限15）
+    volunteer_hours: float = 0.0,  # 志工時數（待串接：每10小時+1，上限15）
+) -> float:
+    """社會貢獻度：基準 70 加減獎懲積分 + 幹部 + 志工時數，夾限 0–100。
+    嘉獎 +2、小功 +5、大功 +15、警告 -2、小過 -5、大過 -15"""
+    conduct_bonus = (
+        counts.get("嘉獎", 0) * 2 +
+        counts.get("小功", 0) * 5 +
+        counts.get("大功", 0) * 15 -
+        counts.get("警告", 0) * 2 -
+        counts.get("小過", 0) * 5 -
+        counts.get("大過", 0) * 15
+    )
+    volunteer_bonus = min(volunteer_hours / 10.0, 15.0)
+    score = 70.0 + conduct_bonus + cadre_score + volunteer_bonus
     return round(min(100.0, max(0.0, score)), 1)
 
 

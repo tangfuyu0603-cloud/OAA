@@ -25,7 +25,7 @@ from pydantic import BaseModel
 
 from onecampus_client import (
     AuthError, OneCampusClient, OneCampusError,
-    fetch_school_grades, fetch_school_conduct, calc_academic, calc_conduct,
+    fetch_school_grades, fetch_school_conduct, calc_academic, calc_conduct, calc_social,
 )
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -231,7 +231,7 @@ async def sync_all_stream(authorization: str = Header(default="")):
                 ac = calc_academic(subjects)
                 ad = calc_conduct(conduct_counts)
                 ph = 75.0   # TODO：待串接體育成績 API
-                so = 60.0   # TODO：待串接幹部紀錄 API
+                so = calc_social(conduct_counts)  # 幹部、志工時數待串接
                 overall = round((ac + ph + ad + so) / 4, 1)
                 yield f"data: {json.dumps({
                     'type': 'student', 'id': 0, 'name': user_name,
