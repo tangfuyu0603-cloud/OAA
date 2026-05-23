@@ -237,6 +237,7 @@ async def sync_all_stream(authorization: str = Header(default="")):
                     'type': 'student', 'id': 0, 'name': user_name,
                     'ac': ac, 'ph': ph, 'ad': ad, 'so': so,
                     'overall': overall, 'grade': _calc_grade(overall),
+                    'subjects': subjects,
                 }, ensure_ascii=False)}\n\n"
             except Exception as exc:
                 yield f"data: {json.dumps({'type': 'error', 'message': f'真實資料取得失敗：{exc}'}, ensure_ascii=False)}\n\n"

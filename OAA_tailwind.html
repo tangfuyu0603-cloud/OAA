@@ -1309,6 +1309,13 @@ function handleSSEEvent(raw) {
     s.ph = data.ph ?? s.ph;
     s.ad = data.ad ?? s.ad;
     s.so = data.so ?? s.so;
+    if (data.subjects && data.subjects.length) {
+      EXAMS[s.id] = data.subjects.map(sub => {
+        const name = sub['科目名稱'] || sub['科目'] || sub['name'] || '—';
+        const avg  = sub['科目平均'] != null ? sub['科目平均'] : '—';
+        return [name, '—', avg, '—', avg];
+      });
+    }
     renderList();
     if (selectedId === s.id) updateDashboard(s);
     appendTerminalLine(`${data.name}｜綜合 ${data.overall ?? '—'} · ${data.grade ?? '—'}`, 'info');
